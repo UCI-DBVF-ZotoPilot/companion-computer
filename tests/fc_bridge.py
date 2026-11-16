@@ -5,6 +5,8 @@ import time
 from pymavlink import mavutil
 import serial
 
+HEARTBEAT_TIMEOUT_SECONDS: float = 5.0
+
 def setup_logger(log_path: str) -> logging.Logger:
     """Configure file and console logging for the MAVLink bridge."""
     logger: logging.Logger = logging.getLogger("FlightControllerBridge")
@@ -111,6 +113,7 @@ def run_bridge(default_port: str = "/dev/ttyACM1", baud: int = 115200) -> None:
     logger: logging.Logger = setup_logger("/var/log/dbvf/comms.log")
     connection: mavutil.mavfile | None = None
     last_heartbeat_sent: float = 0.0
+    last_message_recieved: float = 0.0
 
     while True:
         try:
@@ -122,8 +125,20 @@ def run_bridge(default_port: str = "/dev/ttyACM1", baud: int = 115200) -> None:
                     continue
                 request_telemetry_streams(connection, logger)
                 send_approved_test_command(connection, logger)
+                last_message_recieved = time.time()
 
             current_time: float = time.time()
+            if current_time - last_message_recieved > HEARTBEAT_TIMEOUT_SECONDS:
+                logger.error(f"No messages from flight controller for {HEARTBEAT_TIMEOUT_SECONDS:.0f}s. "
+                             "Treating link as dead, reconnecting...")
+                try:
+                    connection.close()
+                except Exception:
+                    pass
+                connection = None
+                time.sleep(2.0)
+                continue
+
             if current_time - last_heartbeat_sent >= 1.0:
                 connection.mav.heartbeat_send(
                     mavutil.mavlink.MAV_TYPE_ONBOARD_CONTROLLER,
@@ -139,7 +154,8 @@ def run_bridge(default_port: str = "/dev/ttyACM1", baud: int = 115200) -> None:
             message_type: str = message.get_type()
             if message_type == "BAD_DATA":
                 continue
-            elif message_type == "HEARTBEAT":
+            last_message_recieved = time.time()
+            if message_type == "HEARTBEAT":
                 armed: bool = bool(message.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
                 logger.info(f"Flight Controller Status -> Armed: {armed} | Custom Mode: {message.custom_mode}")
             elif message_type == "GLOBAL_POSITION_INT":
