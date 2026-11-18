@@ -20,6 +20,7 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
             "topic": "/sensors/lidar",
             "encoding": "json",
             "schemaName": "LidarData",
+            "schemaEncoding": "jsonschema",
             "schema": json.dumps({
                 "type": "object",
                 "properties": {
@@ -32,6 +33,7 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
             "topic": "/vision/apriltag",
             "encoding": "json",
             "schemaName": "VisionData",
+            "schemaEncoding": "jsonschema",
             "schema": json.dumps({
                 "type": "object",
                 "properties": {
@@ -45,7 +47,7 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
         
         while True:
             elapsed: float = time.time() - start_time
-            lidar_dist: float = max(0.0, 9.14 - (0.5 * elapsed))
+            lidar_dist: float = max(0.0, 30 - (0.5 * elapsed))
             x_offset: float = 50.0 * math.sin(elapsed)
             y_offset: float = 20.0 * math.cos(elapsed)
             
