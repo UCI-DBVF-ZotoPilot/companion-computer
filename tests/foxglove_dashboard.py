@@ -16,6 +16,24 @@ def inches_to_meters(inches: float) -> float:
 def meters_to_inches(meters: float) -> float:
     return meters * 39.3701
 
+def looping_lidar_distance(elapsed: float) -> float:
+    """Drop from 30 ft to the ground, hold 5 s, climb back, hold 5 s, and repeat."""
+    ceiling_m: float = feet_to_meters(30.0)
+    vertical_speed_m_s: float = 0.5
+    hold_s: float = 5.0
+    travel_s: float = ceiling_m / vertical_speed_m_s
+    cycle_s: float = (2.0 * travel_s) + (2.0 * hold_s)
+    phase: float = elapsed % cycle_s
+    if phase < travel_s:
+        return ceiling_m - (vertical_speed_m_s * phase)
+    phase -= travel_s
+    if phase < hold_s:
+        return 0.0
+    phase -= hold_s
+    if phase < travel_s:
+        return vertical_speed_m_s * phase
+    return ceiling_m
+
 class Listener(FoxgloveServerListener):
     def on_subscribe(self, server: FoxgloveServer, channel_id: int) -> None:
         pass
@@ -36,7 +54,7 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
             "schema": json.dumps({
                 "type": "object",
                 "properties": {
-                    "distance_m": {"type": "number"},
+                    "distance_ft": {"type": "number"},
                     "status": {"type": "string"},
                 },
             }),
@@ -51,7 +69,7 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
                 "properties": {
                     "x_offset_px": {"type": "number"},
                     "y_offset_px": {"type": "number"},
-                    "z_distance_m": {"type": "number"},
+                    "z_distance_ft": {"type": "number"},
                 },
             }),
         })
@@ -76,14 +94,14 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
         
         while True:
             elapsed: float = time.time() - start_time
-            lidar_dist: float = max(0.0, feet_to_meters(30) - (0.5 * elapsed))
+            lidar_dist_ft: float = meters_to_feet(looping_lidar_distance(elapsed))
             x_offset: float = feet_to_meters(50.0) * math.sin(elapsed) * 0
             y_offset: float = feet_to_meters(20.0) * math.cos(elapsed) * 0
             
             await server.send_message(
                 lidar_channel_id,
                 time.time_ns(),
-                json.dumps({"distance_m": lidar_dist, "status": "OK"}).encode("utf8")
+                json.dumps({"distance_ft": lidar_dist_ft, "status": "OK"}).encode("utf8")
             )
             await server.send_message(
                 vision_channel_id,
@@ -91,7 +109,7 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
                 json.dumps({
                     "x_offset_px": x_offset, 
                     "y_offset_px": y_offset, 
-                    "z_distance_m": lidar_dist
+                    "z_distance_ft": lidar_dist_ft
                 }).encode("utf8")
             )
             await server.send_message(
