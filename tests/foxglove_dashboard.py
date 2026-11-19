@@ -4,6 +4,18 @@ import math
 import time
 from foxglove_websocket.server import FoxgloveServer, FoxgloveServerListener
 
+def feet_to_meters(feet: float) -> float:
+    return feet * 0.3048
+
+def meters_to_feet(meters: float) -> float:
+    return meters * 3.28084
+
+def inches_to_meters(inches: float) -> float:
+    return inches * 0.0254
+
+def meters_to_inches(meters: float) -> float:
+    return meters * 39.3701
+
 class Listener(FoxgloveServerListener):
     def on_subscribe(self, server: FoxgloveServer, channel_id: int) -> None:
         pass
@@ -47,9 +59,9 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
         
         while True:
             elapsed: float = time.time() - start_time
-            lidar_dist: float = max(0.0, 30 - (0.5 * elapsed))
-            x_offset: float = 50.0 * math.sin(elapsed)
-            y_offset: float = 20.0 * math.cos(elapsed)
+            lidar_dist: float = max(0.0, feet_to_meters(30) - (0.5 * elapsed))
+            x_offset: float = feet_to_meters(50.0) * math.sin(elapsed)
+            y_offset: float = feet_to_meters(20.0) * math.cos(elapsed)
             
             await server.send_message(
                 lidar_channel_id,
