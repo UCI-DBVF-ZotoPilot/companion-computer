@@ -60,8 +60,8 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
         while True:
             elapsed: float = time.time() - start_time
             lidar_dist: float = max(0.0, feet_to_meters(30) - (0.5 * elapsed))
-            x_offset: float = feet_to_meters(50.0) * math.sin(elapsed)
-            y_offset: float = feet_to_meters(20.0) * math.cos(elapsed)
+            x_offset: float = feet_to_meters(50.0) * math.sin(elapsed) * 0
+            y_offset: float = feet_to_meters(20.0) * math.cos(elapsed) * 0
             
             await server.send_message(
                 lidar_channel_id,
