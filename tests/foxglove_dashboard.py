@@ -55,6 +55,23 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
                 },
             }),
         })
+        flight_channel_id: int = await server.add_channel({
+            "topic": "/telemetry/flight",
+            "encoding": "json",
+            "schemaName": "FlightTelemetry",
+            "schemaEncoding": "jsonschema",
+            "schema": json.dumps({
+                "type": "object",
+                "properties": {
+                    "speed": {"type": "number"},
+                    "pitch": {"type": "number"},
+                    "roll": {"type": "number"},
+                    "yaw": {"type": "number"},
+                    "altitude": {"type": "number"},
+                    "position_z": {"type": "number"},
+                },
+            }),
+        })
         start_time: float = time.time()
         
         while True:
@@ -75,6 +92,18 @@ async def generate_mock_data(server: FoxgloveServer): # lidar and camera data mo
                     "x_offset_px": x_offset, 
                     "y_offset_px": y_offset, 
                     "z_distance_m": lidar_dist
+                }).encode("utf8")
+            )
+            await server.send_message(
+                flight_channel_id,
+                time.time_ns(),
+                json.dumps({
+                    "speed": 0.0,
+                    "pitch": 0.0,
+                    "roll": 0.0,
+                    "yaw": 0.0,
+                    "altitude": 0.0,
+                    "position_z": 0.0,
                 }).encode("utf8")
             )
             await asyncio.sleep(0.1)
